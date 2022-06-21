@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -9,7 +10,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <dirent.h>
 
 #define PORT 8000
 #define SIZE 8
@@ -28,12 +28,9 @@ void serve(int s)
     FILE *sin = fdopen(s, "r");
     FILE *sout = fdopen(s, "w");
     int status;
-
-    // Reads the request from the client
     while (fgets(buffer, MSGSIZE, sin) != NULL)
     {
         printf("%d - [%s]\n", ++i, buffer);
-        // A blank line is found -> end of headers
         if (i == 1)
         {
             int indice = 1;
@@ -57,7 +54,6 @@ void serve(int s)
                         DIR *dr = opendir(".");
                         if (dr == NULL)
                         {
-                            printf("Error opening the file %s", filename);
                             printf("Could not open current directory");
                             return 0;
                         }
@@ -76,49 +72,50 @@ void serve(int s)
                 indice++;
                 token = strtok(NULL, espacio);
             }
-            //==========================================
-            char *contiene;
-            contiene = strstr(filetosend, ".html");
-            if (contiene)
-            {
-                strcpy(fileType,"Content-Type: text/html");
-            }
-            char *contiene2;
-            contiene2 = strstr(filetosend, ".jpg");
-            if (contiene2)
-            {
-                strcpy(fileType,"Content-Type: image/jpg");
-            }
-            char *contiene3;
-            contiene3 = strstr(filetosend, ".png");
-            if (contiene3)
-            {
-                strcpy(fileType,"Content-Type: image/png");
-            }
-            char *contiene4;
-            contiene4 = strstr(filetosend, ".txt");
-            if (contiene4)
-            {
-                strcpy(fileType,"Content-Type: text/plain");
-            }
-            //==========================================
         }
         if (buffer[0] == '\r' && buffer[1] == '\n')
         {
             break;
         }
     }
-
-    // Builds response
     sprintf(buffer, "HTTP/1.0 200 OK\r\n");
     fputs(buffer, sout);
-
     sprintf(buffer, "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n");
     fputs(buffer, sout);
+    char *contiene;
+    contiene = strstr(filetosend, ".html");
+    if (contiene)
+    {
+        sprintf("Content-Type:", "text/html\r\n");
+        fputs(buffer, sout);
+        printf("EL TIPO DE ARCHIVO SE MANDO COMO HTML");
+        //strcpy(fileType, "Content-Type: text/html");
+    }
+    char *contiene2;
+    contiene2 = strstr(filetosend, ".jpg");
+    if (contiene2)
+    {
+        sprintf("Content-Type:", "image/jpg\r\n");
+        fputs(buffer, sout);
+        //strcpy(fileType, "Content-Type: image/jpg");
+    }
+    char *contiene3;
+    contiene3 = strstr(filetosend, ".png");
+    if (contiene3)
+    {
+        sprintf("Content-Type:", "image/png\r\n");
+        fputs(buffer, sout);
+        //strcpy(fileType, "Content-Type: image/png");
+    }
+    char *contiene4;
+    contiene4 = strstr(filetosend, ".txt");
+    if (contiene4)
+    {
+        sprintf("Content-Type:", "text/plain\r\n");
+        fputs(buffer, sout);
+        //strcpy(fileType, "Content-Type: text/plain");
+    }
 
-    sprintf("%s\r\n",fileType);
-    fputs(buffer, sout);
-    
     stat(filetosend, &buf);
     printf("Size -----------> %d\n", (int)buf.st_size);
 
@@ -142,27 +139,21 @@ int main()
     int sd, sdo, size, r;
     struct sockaddr_in sin, pin;
     socklen_t addrlen;
-
-    // 1. Crear el socket
     sd = socket(AF_INET, SOCK_STREAM, 0);
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = INADDR_ANY;
     sin.sin_port = htons(PORT);
-
-    // 2. Asociar el socket a IP:port
     r = bind(sd, (struct sockaddr *)&sin, sizeof(sin));
     if (r < 0)
     {
         perror("bind");
         return -1;
     }
-    // 3. Establecer backlog
     listen(sd, 5);
 
     addrlen = sizeof(pin);
-    // 4. Esperar conexion
     while ((sdo = accept(sd, (struct sockaddr *)&pin, &addrlen)) > 0)
     {
         if (!fork())
